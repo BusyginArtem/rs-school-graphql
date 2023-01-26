@@ -75,7 +75,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       try {
         return await fastify.db.posts.delete(request.params.id);
       } catch (error) {
-        throw reply.notFound("Post not found!");
+        throw reply.badRequest("Wrong post id!");
       }
     }
   );
@@ -94,7 +94,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
 
         return await fastify.db.posts.change(params.id, body);
       } catch (error) {
-        throw reply.notFound("Post not found!");
+        throw reply.badRequest("Wrong post id!");
       }
     }
   );

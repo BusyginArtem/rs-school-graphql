@@ -96,12 +96,12 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
           }
         }
 
-        for (const subscriberId of user.subscribedToUserIds) {
-          const subscriber = await fastify.db.users.findOne({
-            key: "id",
-            equals: subscriberId,
-          });
+        const subscribers = await fastify.db.users.findMany({
+          key: "subscribedToUserIds",
+          inArray: user.id,
+        });
 
+        for (const subscriber of subscribers) {
           if (subscriber) {
             await fastify.db.users.change(subscriber.id, {
               subscribedToUserIds: subscriber.subscribedToUserIds.filter(
@@ -113,7 +113,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
 
         return user;
       } catch (error) {
-        throw reply.notFound("User not found");
+        throw reply.badRequest("Wrong user id!");
       }
     }
   );
@@ -217,7 +217,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       if (user) {
         return fastify.db.users.change(request.params.id, body);
       } else {
-        throw reply.notFound("User not found!");
+        throw reply.badRequest("Wrong user id!");
       }
     }
   );
