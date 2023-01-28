@@ -55,7 +55,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         equals: memberTypeId,
       });
 
-      if (memberType) {
+      if (!memberType) {
         throw reply.badRequest("Member type doesn't exist!");
       }
 
@@ -71,16 +71,20 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply): Promise<ProfileEntity> {
-      const profile = await fastify.db.profiles.findOne({
-        key: "id",
-        equals: request.params.id,
-      });
+      try {
+        const profile = await fastify.db.profiles.findOne({
+          key: "id",
+          equals: request.params.id,
+        });
 
-      if (!profile) {
+        if (!profile) {
+          throw reply.badRequest("Wrong profile id!");
+        }
+
+        return await fastify.db.profiles.delete(profile.id);
+      } catch {
         throw reply.notFound("Profile not found!");
       }
-
-      return profile;
     }
   );
 
@@ -93,16 +97,16 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply): Promise<ProfileEntity> {
-      const profile = await fastify.db.profiles.findOne({
-        key: "id",
-        equals: request.params.id,
-      });
+      try {
+        const profile = await fastify.db.profiles.change(
+          request.params.id,
+          request.body
+        );
 
-      if (!profile) {
-        throw reply.notFound("Profile not found!");
+        return profile;
+      } catch {
+        throw reply.badRequest("Wrong profile id!");
       }
-
-      return profile;
     }
   );
 };
