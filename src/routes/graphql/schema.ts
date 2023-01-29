@@ -3,11 +3,25 @@ import {
   GraphQLList,
   GraphQLSchema,
   GraphQLObjectType,
+  GraphQLString,
 } from "graphql";
+//
 import { UserEntity } from "../../utils/DB/entities/DBUsers";
-import { UserType, ProfileType, newUserType, PostType } from "./schemaTypes";
+import {
+  UserType,
+  ProfileType,
+  addUserInput,
+  PostType,
+  MemberType,
+  newPostType,
+  newProfileType,
+  updateUserInput,
+  // EntitiesType,
+  // Entities,
+} from "./schemaTypes";
 import { ProfileEntity } from "../../utils/DB/entities/DBProfiles";
 import { PostEntity } from "../../utils/DB/entities/DBPosts";
+import { MemberTypeEntity } from "../../utils/DB/entities/DBMemberTypes";
 
 const query = new GraphQLObjectType({
   name: "query",
@@ -47,7 +61,7 @@ const query = new GraphQLObjectType({
     posts: {
       type: new GraphQLList(PostType),
       async resolve(_, __, context): Promise<PostEntity[]> {
-        return await context.db.profiles.findMany();
+        return await context.db.posts.findMany();
       },
     },
     post: {
@@ -60,27 +74,73 @@ const query = new GraphQLObjectType({
         });
       },
     },
-    // memberTypes: {
-    // 	type: new GraphQLList(MemberType),
-    // },
-    // memberType: {
-    // 	type: MemberType,
-    // 	args: { id: { type: GraphQLString } },
-    // },
+    memberTypes: {
+      type: new GraphQLList(MemberType),
+      async resolve(_, __, context): Promise<MemberTypeEntity[]> {
+        return await context.db.memberTypes.findMany();
+      },
+    },
+    memberType: {
+      type: MemberType,
+      args: { id: { type: GraphQLString } },
+      async resolve(_, { id }, context): Promise<MemberTypeEntity> {
+        return await context.db.memberTypes.findOne({
+          key: "id",
+          equals: id,
+        });
+      },
+    },
   },
 });
 
 const mutation = new GraphQLObjectType({
-  name: "Mutation",
+  name: "mutation",
   fields: {
     addUser: {
       type: UserType,
-      args: { input: { type: newUserType } },
+      args: { input: { type: addUserInput } },
       async resolve(
         _,
         { input }: Record<"input", Omit<UserEntity, "id">>,
         context
-      ) {},
+      ): Promise<UserEntity> {
+        return await context.db.users.create(input);
+      },
+    },
+    addPost: {
+      type: PostType,
+      args: { input: { type: newPostType } },
+      async resolve(
+        _,
+        { input }: Record<"input", PostEntity>,
+        context
+      ): Promise<PostEntity> {
+        return await context.db.posts.create(input);
+      },
+    },
+    addProfile: {
+      type: ProfileType,
+      args: { input: { type: newProfileType } },
+      async resolve(
+        _,
+        { input }: Record<"input", ProfileEntity>,
+        context
+      ): Promise<ProfileEntity> {
+        return await context.db.profiles.create(input);
+      },
+    },
+    updateUser: {
+      type: UserType,
+      args: { input: { type: updateUserInput } },
+      async resolve(
+        _,
+        { input }: Record<"input", UserEntity>,
+        context
+      ): Promise<UserEntity> {
+        const { id, ...rest } = input;
+
+        return context.db.users.change(id, rest);
+      },
     },
   },
 });

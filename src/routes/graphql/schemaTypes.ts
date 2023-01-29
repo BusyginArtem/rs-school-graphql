@@ -18,7 +18,7 @@ export const PostType = new GraphQLObjectType({
     id: { type: GraphQLID },
     title: { type: new GraphQLNonNull(GraphQLString) },
     content: { type: new GraphQLNonNull(GraphQLString) },
-    userId: { type: new GraphQLNonNull(GraphQLInt) },
+    userId: { type: new GraphQLNonNull(GraphQLString) },
   }),
 });
 
@@ -47,7 +47,7 @@ export const MemberType = new GraphQLObjectType({
 });
 
 export const UserType = new GraphQLObjectType({
-  name: "User",
+  name: "UserType",
   fields: () => ({
     id: { type: GraphQLID },
     firstName: { type: new GraphQLNonNull(GraphQLString) },
@@ -62,23 +62,52 @@ export const UserType = new GraphQLObjectType({
         });
       },
     },
-    // userSubscribedTo: {
-    // 	type: new GraphQLList(),
-    // 	async resolve(parent: UserEntity, _, context) {
-    // 	},
-    // },
-    // subscribedToUser: {
-    // 	type: new GraphQLList(),
-    // 	async resolve(parent: UserEntity, _, context) {
-    // 	},
-    // },
+    userSubscribedTo: {
+      type: new GraphQLList(UserSubscribedToType),
+      async resolve(parent: UserEntity, _, context) {
+        return parent.subscribedToUserIds.map(async (user) => {
+          if (user) {
+            return await context.db.users.findOne({
+              key: "id",
+              equals: user,
+            });
+          }
+        });
+      },
+    },
+    subscribedToUser: {
+      type: new GraphQLList(SubscribedToType),
+      async resolve(parent: UserEntity, _, context): Promise<UserEntity[]> {
+        const users = await context.db.users.findMany();
+
+        return users
+          .map((user: UserEntity) => {
+            if (user.subscribedToUserIds.includes(parent.id)) {
+              return user;
+            }
+
+            return null;
+          })
+          .filter((item: UserEntity | null) => item);
+      },
+    },
     posts: {
       type: new GraphQLList(PostType),
-      async resolve(parent: UserEntity, _, context): Promise<PostEntity> {
-        return await context.db.posts.findMany({
+      async resolve(
+        parent: UserEntity,
+        _,
+        context
+      ): Promise<PostEntity | null> {
+        const posts = await context.db.posts.findMany({
           key: "userId",
           equals: parent.id,
         });
+
+        if (posts) {
+          return posts;
+        }
+
+        return null;
       },
     },
     memberType: {
@@ -108,11 +137,144 @@ export const UserType = new GraphQLObjectType({
   }),
 });
 
-export const newUserType = new GraphQLInputObjectType({
-  name: "newUserType",
+export const UserSubscribedToType = new GraphQLObjectType({
+  name: "UserSubscribedToType",
+  fields: () => ({
+    id: { type: GraphQLID },
+    firstName: { type: new GraphQLNonNull(GraphQLString) },
+    lastName: { type: new GraphQLNonNull(GraphQLString) },
+    email: { type: new GraphQLNonNull(GraphQLString) },
+    profile: {
+      type: ProfileType,
+      async resolve(parent: UserEntity, _, context): Promise<ProfileEntity> {
+        return await context.db.profiles.findOne({
+          key: "userId",
+          equals: parent.id,
+        });
+      },
+    },
+    userSubscribedTo: {
+      type: new GraphQLList(UserSubscribedToDeepType),
+      async resolve(parent: UserEntity, _, context) {
+        return parent.subscribedToUserIds.map(async (userId) => {
+          return await context.db.users.findOne({
+            key: "id",
+            equals: userId,
+          });
+        });
+      },
+    },
+  }),
+});
+
+export const UserSubscribedToDeepType = new GraphQLObjectType({
+  name: "UserSubscribedToDeepType",
+  fields: () => ({
+    id: { type: GraphQLID },
+    firstName: { type: new GraphQLNonNull(GraphQLString) },
+    lastName: { type: new GraphQLNonNull(GraphQLString) },
+    email: { type: new GraphQLNonNull(GraphQLString) },
+    profile: {
+      type: ProfileType,
+      async resolve(parent: UserEntity, _, context): Promise<ProfileEntity> {
+        return await context.db.profiles.findOne({
+          key: "userId",
+          equals: parent.id,
+        });
+      },
+    },
+  }),
+});
+
+export const SubscribedToType = new GraphQLObjectType({
+  name: "SubscribedToType",
+  fields: () => ({
+    id: { type: GraphQLID },
+    firstName: { type: new GraphQLNonNull(GraphQLString) },
+    lastName: { type: new GraphQLNonNull(GraphQLString) },
+    email: { type: new GraphQLNonNull(GraphQLString) },
+    posts: {
+      type: new GraphQLList(PostType),
+      async resolve(parent: UserEntity, _, context) {
+        return context.db.posts.findMany({
+          key: "userId",
+          equals: parent.id,
+        });
+      },
+    },
+    subscribedToUser: {
+      type: new GraphQLList(SubscribedToDeepType),
+      async resolve(parent: UserEntity, _, context) {
+        return parent.subscribedToUserIds.map(async (user) => {
+          if (user) {
+            return await context.db.users.findOne({
+              key: "id",
+              equals: user,
+            });
+          }
+        });
+      },
+    },
+  }),
+});
+
+export const SubscribedToDeepType = new GraphQLObjectType({
+  name: "SubscribedToDeepType",
+  fields: () => ({
+    id: { type: GraphQLID },
+    firstName: { type: new GraphQLNonNull(GraphQLString) },
+    lastName: { type: new GraphQLNonNull(GraphQLString) },
+    email: { type: new GraphQLNonNull(GraphQLString) },
+    posts: {
+      type: new GraphQLList(PostType),
+      async resolve(parent: UserEntity, _, context) {
+        return context.db.posts.findMany({
+          key: "userId",
+          equals: parent.id,
+        });
+      },
+    },
+  }),
+});
+
+export const addUserInput = new GraphQLInputObjectType({
+  name: "addUserInput",
   fields: {
     firstName: { type: new GraphQLNonNull(GraphQLString) },
     lastName: { type: new GraphQLNonNull(GraphQLString) },
     email: { type: new GraphQLNonNull(GraphQLString) },
+  },
+});
+
+export const updateUserInput = new GraphQLInputObjectType({
+  name: "updateUserInput",
+  fields: {
+    id: { type: new GraphQLNonNull(GraphQLID) },
+    firstName: { type: GraphQLString },
+    lastName: { type: GraphQLString },
+    email: { type: GraphQLString },
+  },
+});
+
+export const newPostType = new GraphQLInputObjectType({
+  name: "newPostType",
+  fields: {
+    title: { type: new GraphQLNonNull(GraphQLString) },
+    content: { type: new GraphQLNonNull(GraphQLString) },
+    userId: { type: new GraphQLNonNull(GraphQLString) },
+  },
+});
+
+export const newProfileType = new GraphQLInputObjectType({
+  name: "newProfileType",
+  fields: {
+    avatar: { type: new GraphQLNonNull(GraphQLString) },
+    sex: { type: new GraphQLNonNull(GraphQLString) },
+    birthday: { type: new GraphQLNonNull(GraphQLInt) },
+    street: { type: new GraphQLNonNull(GraphQLString) },
+    city: { type: new GraphQLNonNull(GraphQLString) },
+    country: { type: new GraphQLNonNull(GraphQLString) },
+    memberTypeId: { type: new GraphQLNonNull(GraphQLString) },
+    userId: { type: new GraphQLNonNull(GraphQLString) },
   },
 });
