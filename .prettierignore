@@ -1,0 +1,17 @@
+# Ignore artifacts:
+build
+coverage
+# write content
+src/assets
+**/*.md
+**/*.svg
+**/*.html
+**/*.ejs
+**/*.png
+**/*.eot
+**/*.woff
+**/*.ttf
+**/*.gif
+**/*.jpg
+**/*.jpeg
+# package.json
