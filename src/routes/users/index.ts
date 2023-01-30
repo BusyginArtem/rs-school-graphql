@@ -141,11 +141,15 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         });
 
         if (user) {
-          if (user.subscribedToUserIds.includes(subscriber.id)) {
-            return user;
+          if (subscriber.subscribedToUserIds.includes(subscriber.id)) {
+            return subscriber;
           } else {
-            return fastify.db.users.change(user.id, {
+            await fastify.db.users.change(user.id, {
               subscribedToUserIds: [...user.subscribedToUserIds, subscriber.id],
+            });
+
+            return fastify.db.users.change(subscriber.id, {
+              subscribedToUserIds: [...subscriber.subscribedToUserIds, user.id],
             });
           }
         } else {
@@ -181,9 +185,15 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
 
         if (user) {
           if (user.subscribedToUserIds.includes(subscriber.id)) {
-            return fastify.db.users.change(user.id, {
+            await fastify.db.users.change(user.id, {
               subscribedToUserIds: user.subscribedToUserIds.filter(
                 (id) => id !== subscriber.id
+              ),
+            });
+
+            return fastify.db.users.change(subscriber.id, {
+              subscribedToUserIds: subscriber.subscribedToUserIds.filter(
+                (id) => id !== user.id
               ),
             });
           } else {

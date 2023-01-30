@@ -16,6 +16,10 @@ import {
   newPostType,
   newProfileType,
   updateUserInput,
+  updateProfileType,
+  updatePostType,
+  updateMemberType,
+  subscribeUserType,
   // EntitiesType,
   // Entities,
 } from "./schemaTypes";
@@ -101,7 +105,7 @@ const mutation = new GraphQLObjectType({
       args: { input: { type: addUserInput } },
       async resolve(
         _,
-        { input }: Record<"input", Omit<UserEntity, "id">>,
+        { input }: Record<"input", UserEntity>,
         context
       ): Promise<UserEntity> {
         return await context.db.users.create(input);
@@ -116,6 +120,19 @@ const mutation = new GraphQLObjectType({
         context
       ): Promise<PostEntity> {
         return await context.db.posts.create(input);
+      },
+    },
+    updatePost: {
+      type: PostType,
+      args: { input: { type: updatePostType } },
+      async resolve(
+        _,
+        { input }: Record<"input", PostEntity>,
+        context
+      ): Promise<PostEntity> {
+        const { id, ...rest } = input;
+
+        return await context.db.posts.change(id, rest);
       },
     },
     addProfile: {
@@ -140,6 +157,102 @@ const mutation = new GraphQLObjectType({
         const { id, ...rest } = input;
 
         return context.db.users.change(id, rest);
+      },
+    },
+    updateProfile: {
+      type: ProfileType,
+      args: { input: { type: updateProfileType } },
+      async resolve(
+        _,
+        { input }: Record<"input", ProfileEntity>,
+        context
+      ): Promise<ProfileEntity> {
+        const { id, ...rest } = input;
+
+        return context.db.profiles.change(id, rest);
+      },
+    },
+    updateMemberType: {
+      type: MemberType,
+      args: { input: { type: updateMemberType } },
+      async resolve(
+        _,
+        { input }: Record<"input", MemberTypeEntity>,
+        context
+      ): Promise<MemberTypeEntity> {
+        const { id, ...rest } = input;
+
+        return context.db.memberTypes.change(id, rest);
+      },
+    },
+    subscribeUser: {
+      type: UserType,
+      args: { input: { type: subscribeUserType } },
+      async resolve(
+        _,
+        { input }: Record<"input", Pick<PostEntity, "id" | "userId">>,
+        context
+      ): Promise<UserEntity> {
+        const { id, userId } = input;
+
+        const subscriber = await context.db.users.findOne({
+          key: "id",
+          equals: id,
+        });
+
+        const user = await context.db.users.findOne({
+          key: "id",
+          equals: userId,
+        });
+
+        if (subscriber.subscribedToUserIds.includes(subscriber.id)) {
+          return subscriber;
+        } else {
+          await context.db.users.change(user.id, {
+            subscribedToUserIds: [...user.subscribedToUserIds, subscriber.id],
+          });
+
+          return context.db.users.change(subscriber.id, {
+            subscribedToUserIds: [...subscriber.subscribedToUserIds, user.id],
+          });
+        }
+      },
+    },
+    unSubscribeUser: {
+      type: UserType,
+      args: { input: { type: subscribeUserType } },
+      async resolve(
+        _,
+        { input }: Record<"input", Pick<PostEntity, "id" | "userId">>,
+        context
+      ): Promise<UserEntity> {
+        const { id, userId } = input;
+
+        const subscriber = await context.db.users.findOne({
+          key: "id",
+          equals: id,
+        });
+
+        const user = await context.db.users.findOne({
+          key: "id",
+          equals: userId,
+        });
+
+        if (user.subscribedToUserIds.includes(subscriber.id)) {
+          await context.db.users.change(user.id, {
+            subscribedToUserIds: user.subscribedToUserIds.filter(
+              (id: string) => id !== subscriber.id
+            ),
+          });
+
+          return context.db.users.change(subscriber.id, {
+            subscribedToUserIds: subscriber.subscribedToUserIds.filter(
+              (id: string) => id !== user.id
+            ),
+          });
+        } else {
+          return subscriber;
+        }
       },
     },
   },

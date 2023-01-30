@@ -278,3 +278,45 @@ export const newProfileType = new GraphQLInputObjectType({
     userId: { type: new GraphQLNonNull(GraphQLString) },
   },
 });
+
+export const updateProfileType = new GraphQLInputObjectType({
+  name: "updateProfileType",
+  fields: {
+    id: { type: new GraphQLNonNull(GraphQLID) },
+    avatar: { type: GraphQLString },
+    sex: { type: GraphQLString },
+    birthday: { type: GraphQLInt },
+    street: { type: GraphQLString },
+    city: { type: GraphQLString },
+    country: { type: GraphQLString },
+    memberTypeId: { type: GraphQLString },
+    userId: { type: GraphQLString },
+  },
+});
+
+export const updatePostType = new GraphQLInputObjectType({
+  name: "updatePostType",
+  fields: {
+    id: { type: new GraphQLNonNull(GraphQLID) },
+    title: { type: GraphQLString },
+    content: { type: GraphQLString },
+    userId: { type: GraphQLString },
+  },
+});
+
+export const updateMemberType = new GraphQLInputObjectType({
+  name: "updateMemberType",
+  fields: {
+    id: { type: new GraphQLNonNull(GraphQLID) },
+    discount: { type: GraphQLInt },
+    monthPostsLimit: { type: GraphQLInt },
+  },
+});
+
+export const subscribeUserType = new GraphQLInputObjectType({
+  name: "subscribeUserType",
+  fields: {
+    id: { type: new GraphQLNonNull(GraphQLID) },
+    userId: { type: new GraphQLNonNull(GraphQLID) },
+  },
+});
